@@ -1,5 +1,10 @@
-const CACHE_NAME = "skt-study-cache-v4";
-const ASSETS = ["./", "./index.html", "./manifest.webmanifest", "./sw.js"];
+/* SKT Study App Service Worker (v5) */
+const CACHE_NAME = "skt-study-cache-v5";
+const ASSETS = [
+  "./",
+  "./index.html",
+  "./manifest.webmanifest"
+];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
@@ -9,17 +14,26 @@ self.addEventListener("install", (event) => {
 
 self.addEventListener("activate", (event) => {
   event.waitUntil(
-    caches.keys().then((keys) =>
-      Promise.all(keys.map((k) => (k !== CACHE_NAME ? caches.delete(k) : Promise.resolve())))
-    ).then(() => self.clients.claim())
+    caches.keys().then((keys) => Promise.all(keys.map((k) => (k === CACHE_NAME ? null : caches.delete(k)))))
+      .then(() => self.clients.claim())
   );
 });
 
 self.addEventListener("fetch", (event) => {
-  const url = new URL(event.request.url);
-  if (url.origin !== location.origin) {
-    event.respondWith(fetch(event.request).catch(() => caches.match(event.request)));
-    return;
-  }
-  event.respondWith(caches.match(event.request).then((cached) => cached || fetch(event.request)));
+  const req = event.request;
+  const url = new URL(req.url);
+
+  // Network-first for CDN (pdf.js), cache is handled by browser.
+  if (url.origin !== self.location.origin) return;
+
+  event.respondWith(
+    caches.match(req).then((cached) => {
+      if (cached) return cached;
+      return fetch(req).then((resp) => {
+        const copy = resp.clone();
+        caches.open(CACHE_NAME).then((cache) => cache.put(req, copy)).catch(() => {});
+        return resp;
+      }).catch(() => cached);
+    })
+  );
 });

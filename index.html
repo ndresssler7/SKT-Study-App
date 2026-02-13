@@ -1,56 +1,172 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="light">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>SKT Study</title>
-  <meta name="theme-color" content="#111111" />
+  <meta name="theme-color" content="#F6F8FB" />
   <link rel="manifest" href="manifest.webmanifest" />
   <style>
-    :root { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; }
-    body { margin: 0; background:#0b0b0b; color:#f2f2f2; }
-    header { padding: 14px 16px; position: sticky; top: 0; background:#0b0b0bcc; backdrop-filter: blur(10px); border-bottom: 1px solid #222; }
-    h1 { margin: 0; font-size: 16px; font-weight: 700; letter-spacing: .2px; }
-    main { padding: 14px 16px 108px; max-width: 920px; margin: 0 auto; }
+    :root{
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+
+      /* Light (PDG-like) */
+      --bg:#F6F8FB;
+      --text:#111827;
+      --muted:#6B7280;
+      --surface:#FFFFFF;
+      --surface2:#F9FAFB;
+      --border:#E5E7EB;
+      --border2:#D1D5DB;
+      --headerBg: rgba(246,248,251,.88);
+      --shadow: rgba(17,24,39,.08);
+      --primary:#1E4FA8;
+      --primaryText:#FFFFFF;
+      --progress:#1E4FA8;
+      --dangerBorder:#FCA5A5;
+      --dangerBg:#FFF1F2;
+      --okBorder:#86EFAC;
+      --okBg:#ECFDF5;
+      --link:#1E4FA8;
+      --tabBg:#FFFFFF;
+      --tabActiveBg:#EEF2FF;
+      --pillBg:#FFFFFF;
+
+      --btnBg:#1E4FA8;
+      --btnText:#FFFFFF;
+      --btnBorder:#1E4FA8;
+
+      --btnSecondaryBg:#FFFFFF;
+      --btnSecondaryText:#111827;
+      --btnSecondaryBorder:#D1D5DB;
+    }
+
+    /* Softer Dark */
+    html[data-theme="dark"]{
+      --bg:#0F141B;
+      --text:#E5E7EB;
+      --muted:#9CA3AF;
+      --surface:#141B24;
+      --surface2:#101721;
+      --border:#223041;
+      --border2:#2B3B50;
+      --headerBg: rgba(15,20,27,.86);
+      --shadow: rgba(0,0,0,.35);
+      --primary:#4B86FF;
+      --primaryText:#081018;
+      --progress:#4B86FF;
+      --dangerBorder:#7F1D1D;
+      --dangerBg:#1A1010;
+      --okBorder:#14532D;
+      --okBg:#0E1712;
+      --link:#7FB2FF;
+      --tabBg:#101721;
+      --tabActiveBg:#162236;
+      --pillBg:#101721;
+
+      --btnBg:#4B86FF;
+      --btnText:#081018;
+      --btnBorder:#4B86FF;
+
+      --btnSecondaryBg:#101721;
+      --btnSecondaryText:#E5E7EB;
+      --btnSecondaryBorder:#2B3B50;
+    }
+
+    body { margin: 0; background:var(--bg); color:var(--text); }
+    header {
+      padding: 14px 16px;
+      position: sticky; top: 0;
+      background:var(--headerBg);
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid var(--border);
+      z-index: 5;
+    }
+    h1 { margin: 0; font-size: 16px; font-weight: 800; letter-spacing: .2px; }
+    main { padding: 14px 16px 112px; max-width: 920px; margin: 0 auto; }
     .row { display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+
     button, select, input[type="file"], input[type="text"], input[type="number"] {
-      background:#141414; color:#f2f2f2; border: 1px solid #2a2a2a;
-      padding: 10px 12px; border-radius: 12px; font-weight: 650;
+      background:var(--btnSecondaryBg);
+      color:var(--btnSecondaryText);
+      border: 1px solid var(--btnSecondaryBorder);
+      padding: 10px 12px;
+      border-radius: 12px;
+      font-weight: 650;
+      -webkit-tap-highlight-color: transparent;
     }
+    button.primary{
+      background:var(--btnBg);
+      color:var(--btnText);
+      border:1px solid var(--btnBorder);
+    }
+    button:active { transform: scale(0.99); }
     input[type="text"], input[type="number"] { font-weight: 600; }
-    button:hover { border-color:#3a3a3a; }
+
     .card {
-      margin-top: 14px; padding: 16px; border: 1px solid #252525; background:#101010;
-      border-radius: 18px; box-shadow: 0 6px 20px rgba(0,0,0,.25);
+      margin-top: 14px;
+      padding: 16px;
+      border: 1px solid var(--border);
+      background:var(--surface);
+      border-radius: 18px;
+      box-shadow: 0 6px 18px var(--shadow);
     }
-    .muted { color:#b8b8b8; font-size: 13px; }
-    .pill { display:inline-flex; gap:6px; align-items:center; padding: 6px 10px; border-radius: 999px; border:1px solid #2a2a2a; background:#0f0f0f; }
+    .muted { color:var(--muted); font-size: 13px; }
+    .pill {
+      display:inline-flex; gap:6px; align-items:center;
+      padding: 6px 10px; border-radius: 999px;
+      border:1px solid var(--border);
+      background:var(--pillBg);
+      font-weight: 650;
+    }
     .tabs { display:flex; gap:8px; margin-top: 10px; overflow:auto; -webkit-overflow-scrolling: touch; padding-bottom: 2px; }
-    .tab { padding: 8px 12px; border-radius: 999px; border:1px solid #2a2a2a; background:#0f0f0f; cursor:pointer; user-select:none; white-space:nowrap; }
-    .tab.active { border-color:#4a4a4a; background:#141414; }
-    .big { font-size: 18px; font-weight: 750; }
+    .tab {
+      padding: 8px 12px; border-radius: 999px;
+      border:1px solid var(--border2);
+      background:var(--tabBg);
+      cursor:pointer; user-select:none; white-space:nowrap;
+      color: var(--text);
+      font-weight: 650;
+      flex: 0 0 auto;
+    }
+    .tab.active { border-color:var(--primary); background:var(--tabActiveBg); }
+    .big { font-size: 18px; font-weight: 850; }
     .chunk { white-space: pre-wrap; line-height: 1.45; }
     .actions { display:flex; gap:10px; margin-top: 12px; flex-wrap:wrap; }
     .grid { display:grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 12px; }
-    .stat { padding: 12px; border-radius: 16px; border:1px solid #252525; background:#0f0f0f; }
-    .danger { border-color:#4a1b1b; background:#130b0b; }
-    .ok { border-color:#1f3a26; background:#0c140f; }
-    a { color:#9ad; }
+    .stat { padding: 12px; border-radius: 16px; border:1px solid var(--border); background:var(--surface2); }
+    .danger { border-color:var(--dangerBorder); background:var(--dangerBg); }
+    .ok { border-color:var(--okBorder); background:var(--okBg); }
+    a { color:var(--link); }
+
     footerNav {
       position: fixed; bottom: 0; left: 0; right: 0;
-      background:#0b0b0bcc; backdrop-filter: blur(10px);
-      border-top: 1px solid #222; padding: 10px 12px;
+      background:var(--headerBg);
+      backdrop-filter: blur(10px);
+      border-top: 1px solid var(--border);
+      padding: 10px 12px;
       display:flex; justify-content:center;
+      z-index: 5;
     }
-    footerNav .row { max-width:920px; width:100%; justify-content:space-between; }
+    footerNav .row { max-width:920px; width:100%; justify-content:space-between; align-items:center; }
     .smallBtn { padding: 8px 10px; border-radius: 12px; }
-    .kbd { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace; font-size: 12px; padding: 2px 6px; border-radius: 8px; border:1px solid #2a2a2a; background:#0f0f0f; color:#ddd; }
-    .progressWrap { margin-top: 10px; border:1px solid #2a2a2a; border-radius: 999px; overflow:hidden; }
-    .progressBar { height: 10px; background:#f2f2f2; width: 0%; }
-    .badge { display:inline-flex; align-items:center; gap:8px; padding: 8px 10px; border-radius: 14px; border:1px solid #2a2a2a; background:#0f0f0f; }
+    .kbd { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace; font-size: 12px; padding: 2px 6px; border-radius: 8px; border:1px solid var(--border2); background:var(--surface2); color:var(--text); }
+
+    .progressWrap { margin-top: 10px; border:1px solid var(--border2); border-radius: 999px; overflow:hidden; }
+    .progressBar { height: 10px; background:var(--progress); width: 0%; }
+    .badge { display:inline-flex; align-items:center; gap:8px; padding: 8px 10px; border-radius: 14px; border:1px solid var(--border2); background:var(--surface2); font-weight: 650; }
+
+    /* Toggle */
+    .toggleRow{display:flex;align-items:center;gap:10px}
+    .switch{position:relative;display:inline-block;width:44px;height:26px}
+    .switch input{opacity:0;width:0;height:0}
+    .slider{position:absolute;cursor:pointer;top:0;left:0;right:0;bottom:0;background:var(--border2);transition:.2s;border-radius:999px}
+    .slider:before{position:absolute;content:"";height:20px;width:20px;left:3px;bottom:3px;background:var(--surface);transition:.2s;border-radius:999px;border:1px solid var(--border)}
+    .switch input:checked + .slider{background:var(--primary)}
+    .switch input:checked + .slider:before{transform:translateX(18px)}
   </style>
 
-  <!-- PDF.js (client-side PDF text extraction) -->
+  <!-- PDF.js for client-side PDF text extraction -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.2.67/pdf.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 </head>
 
@@ -64,7 +180,7 @@
     </div>
   </div>
 
-  <div class="tabs">
+  <div class="tabs" role="tablist" aria-label="Sections">
     <div class="tab active" data-tab="home">Home</div>
     <div class="tab" data-tab="study">Study</div>
     <div class="tab" data-tab="quiz">Quiz</div>
@@ -94,22 +210,7 @@
 </footerNav>
 
 <script>
-/**
- * SKT Study v4 (merged)
- * - Full importer + cards + cloze quiz + stats + settings
- * - Home "Today's Mission" + XP/Levels + badges (subtle)
- *
- * Storage (localStorage):
- * state = {
- *   docs: [{id, name, createdAt, text}],
- *   cards: [{id, docId, title, body, ease, dueAt, seen, correct, wrong}],
- *   prefs: {activeDocId, flip, minChunkSize, maxChunkSize},
- *   stats: {streak, lastStudyDay},
- *   game: {xp, dailyDone, dailyGoal, lastDailyDay, badges:{}}
- * }
- */
-
-const LS_KEY = "sktStudy_v4";
+const LS_KEY = "sktStudy_v5";
 const DAILY_GOAL_DEFAULT = 40;
 const now = () => Date.now();
 
@@ -121,7 +222,8 @@ function defaultState() {
       activeDocId: "",
       flip: false,
       minChunkSize: 350,
-      maxChunkSize: 900
+      maxChunkSize: 900,
+      theme: "light"
     },
     stats: { streak: 0, lastStudyDay: "" },
     game: {
@@ -129,7 +231,7 @@ function defaultState() {
       dailyDone: 0,
       dailyGoal: DAILY_GOAL_DEFAULT,
       lastDailyDay: "",
-      badges: {} // {badgeId: true}
+      badges: {}
     }
   };
 }
@@ -139,14 +241,13 @@ function loadState() {
     const raw = localStorage.getItem(LS_KEY);
     if (!raw) return defaultState();
     const s = JSON.parse(raw);
-    // shallow merge + nested merges
     const d = defaultState();
     return {
       ...d,
       ...s,
       prefs: { ...d.prefs, ...(s.prefs || {}) },
       stats: { ...d.stats, ...(s.stats || {}) },
-      game: { ...d.game, ...(s.game || {}) , badges: { ...(d.game.badges || {}), ...((s.game||{}).badges || {}) } }
+      game: { ...d.game, ...(s.game || {}), badges: { ...(d.game.badges || {}), ...((s.game||{}).badges || {}) } }
     };
   } catch {
     return defaultState();
@@ -156,15 +257,21 @@ function saveState(s) { localStorage.setItem(LS_KEY, JSON.stringify(s)); }
 
 let state = loadState();
 
+function applyTheme() {
+  const theme = (state.prefs.theme === "dark") ? "dark" : "light";
+  document.documentElement.setAttribute("data-theme", theme);
+  const meta = document.querySelector('meta[name="theme-color"]');
+  if (meta) meta.setAttribute("content", theme === "dark" ? "#0F141B" : "#F6F8FB");
+}
+applyTheme();
+
 function uid(prefix="id") {
   return prefix + "_" + Math.random().toString(16).slice(2) + "_" + Date.now().toString(16);
 }
-
 function todayKey() {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
 }
-
 function resetDailyIfNeeded() {
   const tk = todayKey();
   if (state.game.lastDailyDay !== tk) {
@@ -173,7 +280,6 @@ function resetDailyIfNeeded() {
     saveState(state);
   }
 }
-
 function bumpStreak() {
   const tk = todayKey();
   if (state.stats.lastStudyDay === tk) return;
@@ -188,24 +294,17 @@ function bumpStreak() {
   state.stats.lastStudyDay = tk;
   saveState(state);
 }
-
-function calcLevelFromXP(xp) {
-  // clean and predictable: 250 XP per level
-  return Math.floor((xp || 0) / 250) + 1;
-}
-
+function calcLevelFromXP(xp) { return Math.floor((xp || 0) / 250) + 1; }
 function awardXP(amount) {
   resetDailyIfNeeded();
   state.game.xp = (state.game.xp || 0) + amount;
   saveState(state);
 }
-
 function incrementDailyDone(n=1) {
   resetDailyIfNeeded();
   state.game.dailyDone = Math.max(0, (state.game.dailyDone || 0) + n);
   saveState(state);
 }
-
 function earnBadge(id) {
   if (!state.game.badges) state.game.badges = {};
   if (!state.game.badges[id]) {
@@ -213,9 +312,7 @@ function earnBadge(id) {
     saveState(state);
   }
 }
-
 function evaluateBadges() {
-  // subtle, non-cringe badges
   if (state.docs.length >= 1) earnBadge("first_import");
   if ((state.stats.streak || 0) >= 3) earnBadge("streak_3");
   const totalSeen = state.cards.reduce((a,c)=>a+(c.seen||0),0);
@@ -227,7 +324,6 @@ function evaluateBadges() {
   if (totalAttempts >= 100 && acc >= 0.80) earnBadge("acc_80");
 }
 
-// --- Docs / Cards ---
 function activeDoc() {
   if (!state.prefs.activeDocId && state.docs[0]) {
     state.prefs.activeDocId = state.docs[0].id;
@@ -241,10 +337,7 @@ function setActiveDoc(docId) {
   renderAll();
 }
 function cardsForDoc(docId) { return state.cards.filter(c => c.docId === docId); }
-
-function dueCount() {
-  return state.cards.filter(c => !c.dueAt || c.dueAt <= now()).length;
-}
+function dueCount() { return state.cards.filter(c => !c.dueAt || c.dueAt <= now()).length; }
 
 function updateCounts() {
   evaluateBadges();
@@ -262,7 +355,6 @@ function updateCounts() {
 }
 
 function resetProgress() {
-  // keep docs + card text, reset scheduling/performance + daily progress
   state.cards = state.cards.map(c => ({...c, ease: 2.5, dueAt: 0, seen: 0, correct: 0, wrong: 0}));
   state.prefs.flip = false;
   state.stats.streak = 0;
@@ -274,7 +366,7 @@ function resetProgress() {
 }
 document.getElementById("resetBtn").addEventListener("click", resetProgress);
 
-// --- Importers ---
+// Importers
 async function extractPdfText(file) {
   const arrayBuffer = await file.arrayBuffer();
   const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
@@ -289,7 +381,6 @@ async function extractPdfText(file) {
 }
 async function readTextFile(file) { return await file.text(); }
 
-// Chunking: split on blank lines / page markers; pack into min/max.
 function chunkTextToCards(docId, rawText, minSize, maxSize) {
   const cleaned = rawText
     .replace(/\r/g, "")
@@ -306,7 +397,6 @@ function chunkTextToCards(docId, rawText, minSize, maxSize) {
     const first = (text.split(/[.?!]\s/)[0] || text).trim();
     return first.slice(0, 90) || "Card";
   }
-
   function flushBuffer() {
     const b = buffer.trim();
     if (!b) return;
@@ -326,19 +416,15 @@ function chunkTextToCards(docId, rawText, minSize, maxSize) {
 
   for (const part of parts) {
     const candidateLen = (buffer ? buffer.length + 2 : 0) + part.length;
-
     if (candidateLen <= maxSize) {
       buffer += (buffer ? "\n\n" : "") + part;
     } else {
-      if (buffer.length >= minSize) flushBuffer();
-      else if (buffer) flushBuffer();
-
+      if (buffer) flushBuffer();
       if (part.length <= maxSize) {
         buffer = part;
       } else {
         for (let i = 0; i < part.length; i += (maxSize - 50)) {
-          const slice = part.slice(i, i + (maxSize - 50));
-          buffer = slice;
+          buffer = part.slice(i, i + (maxSize - 50));
           flushBuffer();
         }
       }
@@ -348,11 +434,10 @@ function chunkTextToCards(docId, rawText, minSize, maxSize) {
   return cards;
 }
 
-// --- Study scheduling (simple SM-2-ish) ---
+// Scheduling
 function pickNextCard(docId) {
   const list = cardsForDoc(docId);
   if (!list.length) return null;
-
   const due = list.filter(c => !c.dueAt || c.dueAt <= now());
   if (due.length) {
     due.sort((a,b) => (a.dueAt||0) - (b.dueAt||0));
@@ -361,15 +446,13 @@ function pickNextCard(docId) {
   const sorted = [...list].sort((a,b) => (a.seen||0) - (b.seen||0));
   return sorted[0];
 }
-
-function schedule(card, rating /* "again" | "good" */) {
+function schedule(card, rating) {
   const c = {...card};
   c.seen = (c.seen||0) + 1;
-
   if (rating === "again") {
     c.wrong = (c.wrong||0) + 1;
     c.ease = Math.max(1.3, (c.ease||2.5) - 0.2);
-    c.dueAt = now() + 15 * 60 * 1000; // 15 min
+    c.dueAt = now() + 15 * 60 * 1000;
   } else {
     c.correct = (c.correct||0) + 1;
     c.ease = Math.min(3.2, (c.ease||2.5) + 0.05);
@@ -378,59 +461,44 @@ function schedule(card, rating /* "again" | "good" */) {
   }
   return c;
 }
-
 function upsertCard(updated) {
   const i = state.cards.findIndex(x => x.id === updated.id);
   if (i >= 0) state.cards[i] = updated;
   saveState(state);
 }
 
-// --- Quiz (cloze) ---
 function makeCloze(text) {
   const words = text.split(/\s+/).filter(Boolean);
-  const candidates = words
-    .map((w, idx) => ({ w: w.replace(/[^\w-]/g,""), idx }))
+  const candidates = words.map((w, idx) => ({ w: w.replace(/[^\w-]/g,""), idx }))
     .filter(x => x.w.length >= 6 && !/^\d+$/.test(x.w));
   if (!candidates.length) return null;
-
   const pick = candidates[Math.floor(candidates.length * 0.45)];
   const answer = pick.w;
   const masked = words.map((w,i) => (i === pick.idx ? "_____" : w)).join(" ");
   return { masked, answer };
 }
-
 function escapeHtml(s) {
-  return String(s)
-    .replaceAll("&","&amp;")
-    .replaceAll("<","&lt;")
-    .replaceAll(">","&gt;")
-    .replaceAll('"',"&quot;")
-    .replaceAll("'","&#039;");
+  return String(s).replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;")
+    .replaceAll('"',"&quot;").replaceAll("'","&#039;");
 }
 
-// --- UI ---
+// Tabs
 function switchTab(tab) {
   document.querySelectorAll(".tab").forEach(x => x.classList.remove("active"));
-  document.querySelector(`.tab[data-tab="${tab}"]`)?.classList.add("active");
+  const t = document.querySelector(`.tab[data-tab="${tab}"]`);
+  if (t) t.classList.add("active");
   document.querySelectorAll(".panel").forEach(p => p.style.display = "none");
   document.getElementById(tab).style.display = "";
   renderAll();
 }
-
-function renderTabs() {
-  document.querySelectorAll(".tab").forEach(t => {
-    t.addEventListener("click", () => switchTab(t.dataset.tab));
-  });
-}
+document.querySelectorAll(".tab").forEach(t => t.addEventListener("click", () => switchTab(t.dataset.tab)));
 
 function renderHome() {
   const el = document.getElementById("home");
   resetDailyIfNeeded();
-
   const goal = state.game.dailyGoal || DAILY_GOAL_DEFAULT;
   const done = state.game.dailyDone || 0;
   const pct = Math.min(100, Math.round((done / goal) * 100));
-
   const due = dueCount();
   const doc = activeDoc();
   const activeName = doc ? doc.name : "None";
@@ -440,22 +508,16 @@ function renderHome() {
       <div class="big">Today's Mission</div>
       <div class="muted" style="margin-top:6px">Goal: <b>${goal}</b> questions · Due now: <b>${due}</b></div>
       <div class="muted" style="margin-top:6px">Active: ${escapeHtml(activeName)}</div>
-
       <div class="progressWrap"><div class="progressBar" style="width:${pct}%"></div></div>
       <div class="muted" style="margin-top:8px">${done} / ${goal} complete (${pct}%)</div>
-
       <div class="actions">
-        <button id="startStudy">Start Studying</button>
+        <button class="primary" id="startStudy">Start Studying</button>
         <button id="startQuiz">Quick Quiz</button>
         <button id="goLibrary">Import Doc</button>
       </div>
-
-      <div class="muted" style="margin-top:10px">
-        XP increases on every answer. Keep it simple: stack reps.
-      </div>
+      <div class="muted" style="margin-top:10px">XP increases on every answer. Keep it simple: stack reps.</div>
     </div>
   `;
-
   document.getElementById("startStudy").onclick = () => switchTab("study");
   document.getElementById("startQuiz").onclick = () => switchTab("quiz");
   document.getElementById("goLibrary").onclick = () => switchTab("library");
@@ -464,26 +526,17 @@ function renderHome() {
 function renderStudy() {
   const el = document.getElementById("study");
   const doc = activeDoc();
-
   if (!doc) {
-    el.innerHTML = `
-      <div class="card danger">
-        <div class="big">No material imported yet</div>
-        <div class="muted" style="margin-top:8px">Go to <b>Library</b> → Import a PDF or text file to generate study cards.</div>
-      </div>`;
+    el.innerHTML = `<div class="card danger"><div class="big">No material imported yet</div>
+      <div class="muted" style="margin-top:8px">Go to <b>Library</b> → Import a PDF or text file.</div></div>`;
     return;
   }
-
   const next = pickNextCard(doc.id);
   if (!next) {
-    el.innerHTML = `
-      <div class="card">
-        <div class="big">No cards for "${escapeHtml(doc.name)}"</div>
-        <div class="muted" style="margin-top:8px">Go to <b>Library</b> → Import to generate cards.</div>
-      </div>`;
+    el.innerHTML = `<div class="card"><div class="big">No cards for "${escapeHtml(doc.name)}"</div>
+      <div class="muted" style="margin-top:8px">Go to <b>Library</b> → Import to generate cards.</div></div>`;
     return;
   }
-
   const isFlipped = !!state.prefs.flip;
 
   el.innerHTML = `
@@ -495,20 +548,16 @@ function renderStudy() {
         </div>
         <button id="flipBtn">${isFlipped ? "Hide" : "Show"}</button>
       </div>
-
       <div style="margin-top:12px" class="chunk">
         ${isFlipped ? escapeHtml(next.body) : "<span class='muted'>Tap <b>Show</b> to reveal the text</span>"}
       </div>
-
       <div class="actions">
         <button id="againBtn">Again</button>
-        <button id="goodBtn">Good</button>
+        <button class="primary" id="goodBtn">Good</button>
       </div>
-
-      <div class="muted" style="margin-top:10px">
-        Seen: ${next.seen || 0} · Correct: ${next.correct || 0} · Wrong: ${next.wrong || 0}
-      </div>
-    </div>`;
+      <div class="muted" style="margin-top:10px">Seen: ${next.seen||0} · Correct: ${next.correct||0} · Wrong: ${next.wrong||0}</div>
+    </div>
+  `;
 
   document.getElementById("flipBtn").onclick = () => {
     state.prefs.flip = !state.prefs.flip;
@@ -520,11 +569,7 @@ function renderStudy() {
     bumpStreak();
     incrementDailyDone(1);
     awardXP(2);
-
-    const upd = schedule(next, "again");
-    upsertCard(upd);
-    saveState(state);
-
+    upsertCard(schedule(next, "again"));
     renderAll();
   };
 
@@ -532,11 +577,7 @@ function renderStudy() {
     bumpStreak();
     incrementDailyDone(1);
     awardXP(10);
-
-    const upd = schedule(next, "good");
-    upsertCard(upd);
-    saveState(state);
-
+    upsertCard(schedule(next, "good"));
     renderAll();
   };
 }
@@ -544,36 +585,24 @@ function renderStudy() {
 function renderQuiz() {
   const el = document.getElementById("quiz");
   const doc = activeDoc();
-
   if (!doc) {
-    el.innerHTML = `
-      <div class="card danger">
-        <div class="big">No material imported yet</div>
-        <div class="muted" style="margin-top:8px">Import a PDF or text file first.</div>
-      </div>`;
+    el.innerHTML = `<div class="card danger"><div class="big">No material imported yet</div>
+      <div class="muted" style="margin-top:8px">Import a PDF or text file first.</div></div>`;
     return;
   }
-
   const list = cardsForDoc(doc.id);
   if (!list.length) {
-    el.innerHTML = `
-      <div class="card">
-        <div class="big">No cards available</div>
-        <div class="muted" style="margin-top:8px">Go to <b>Library</b> → Import to generate cards.</div>
-      </div>`;
+    el.innerHTML = `<div class="card"><div class="big">No cards available</div>
+      <div class="muted" style="margin-top:8px">Go to <b>Library</b> → Import to generate cards.</div></div>`;
     return;
   }
 
   const card = pickNextCard(doc.id) || list[0];
   const cloze = makeCloze(card.body);
-
   if (!cloze) {
-    el.innerHTML = `
-      <div class="card">
-        <div class="big">Quiz not available for this card</div>
-        <div class="muted" style="margin-top:8px">Try another card.</div>
-        <button id="nextQ" style="margin-top:12px">Next</button>
-      </div>`;
+    el.innerHTML = `<div class="card"><div class="big">Quiz not available for this card</div>
+      <div class="muted" style="margin-top:8px">Try another card.</div>
+      <button id="nextQ" style="margin-top:12px">Next</button></div>`;
     document.getElementById("nextQ").onclick = () => renderQuiz();
     return;
   }
@@ -583,34 +612,25 @@ function renderQuiz() {
       <div class="muted">Cloze quiz · ${escapeHtml(doc.name)}</div>
       <div class="big" style="margin-top:8px">${escapeHtml(card.title)}</div>
       <div class="chunk" style="margin-top:12px">${escapeHtml(cloze.masked)}</div>
-
       <div style="margin-top:12px" class="row">
         <input id="ans" style="flex:1; min-width:220px" placeholder="Type the missing word" />
-        <button id="checkBtn">Check</button>
+        <button class="primary" id="checkBtn">Check</button>
       </div>
       <div id="feedback" class="muted" style="margin-top:10px"></div>
-
-      <div class="actions">
-        <button id="nextBtn">Next</button>
-      </div>
-    </div>`;
+      <div class="actions"><button id="nextBtn">Next</button></div>
+    </div>
+  `;
 
   document.getElementById("checkBtn").onclick = () => {
     bumpStreak();
     incrementDailyDone(1);
-
     const guess = document.getElementById("ans").value.trim();
     const ok = guess.toLowerCase() === cloze.answer.toLowerCase();
 
-    document.getElementById("feedback").innerHTML = ok
-      ? `✅ Correct`
-      : `❌ Correct answer: <b>${escapeHtml(cloze.answer)}</b>`;
-
+    document.getElementById("feedback").innerHTML = ok ? "✅ Correct" : `❌ Correct answer: <b>${escapeHtml(cloze.answer)}</b>`;
     awardXP(ok ? 10 : 2);
 
-    const upd = schedule(card, ok ? "good" : "again");
-    upsertCard(upd);
-    saveState(state);
+    upsertCard(schedule(card, ok ? "good" : "again"));
     renderAll();
   };
 
@@ -628,7 +648,7 @@ function renderLibrary() {
 
       <div class="row" style="margin-top:12px">
         <input type="file" id="fileInput" accept=".pdf,.txt,.md" />
-        <button id="importBtn">Import</button>
+        <button class="primary" id="importBtn">Import</button>
       </div>
 
       <div class="row" style="margin-top:12px">
@@ -638,7 +658,7 @@ function renderLibrary() {
       </div>
 
       <div class="muted" style="margin-top:10px">
-        Tip: start by importing one doc (ex: UFC) so chunks look clean, then adjust chunk sizing in <b>Settings</b>.
+        Tip: import one doc first, then tweak chunk sizing in <b>Settings</b>.
       </div>
     </div>
 
@@ -652,18 +672,14 @@ function renderLibrary() {
             <div style="font-weight:750">${escapeHtml(d.name)}</div>
             <div class="muted">${new Date(d.createdAt).toLocaleString()}</div>
             <div class="muted" style="margin-top:8px">${cardsForDoc(d.id).length} cards</div>
-            <div class="actions" style="margin-top:10px">
-              <button data-open="${d.id}">Set Active</button>
-            </div>
+            <div class="actions" style="margin-top:10px"><button data-open="${d.id}">Set Active</button></div>
           </div>
         `).join("") || `<div class="muted">No documents yet.</div>`}
       </div>
     </div>
   `;
 
-  el.querySelectorAll("button[data-open]").forEach(btn => {
-    btn.onclick = () => setActiveDoc(btn.dataset.open);
-  });
+  el.querySelectorAll("button[data-open]").forEach(btn => btn.onclick = () => setActiveDoc(btn.dataset.open));
 
   const docSelect = document.getElementById("docSelect");
   if (docSelect) docSelect.onchange = () => setActiveDoc(docSelect.value);
@@ -696,14 +712,9 @@ function renderLibrary() {
 
     const docId = uid("doc");
     state.docs.unshift({ id: docId, name, createdAt: now(), text });
-
-    const newCards = chunkTextToCards(docId, text, state.prefs.minChunkSize, state.prefs.maxChunkSize);
-    state.cards.push(...newCards);
-
+    state.cards.push(...chunkTextToCards(docId, text, state.prefs.minChunkSize, state.prefs.maxChunkSize));
     state.prefs.activeDocId = docId;
     state.prefs.flip = false;
-
-    // badge trigger
     earnBadge("first_import");
 
     saveState(state);
@@ -713,8 +724,6 @@ function renderLibrary() {
 
 function renderStats() {
   const el = document.getElementById("stats");
-
-  const totalSeen = state.cards.reduce((a,c)=>a+(c.seen||0),0);
   const totalCorrect = state.cards.reduce((a,c)=>a+(c.correct||0),0);
   const totalWrong = state.cards.reduce((a,c)=>a+(c.wrong||0),0);
   const totalAttempts = totalCorrect + totalWrong;
@@ -749,7 +758,6 @@ function renderStats() {
         <div class="stat"><div class="muted">XP</div><div class="big">${xp}</div></div>
         <div class="stat"><div class="muted">Today</div><div class="big">${done}/${goal}</div></div>
       </div>
-
       <div class="progressWrap"><div class="progressBar" style="width:${pct}%"></div></div>
       <div class="muted" style="margin-top:8px">${pct}% of daily goal</div>
     </div>
@@ -780,11 +788,29 @@ function renderStats() {
 function renderSettings() {
   const el = document.getElementById("settings");
   const goal = state.game.dailyGoal || DAILY_GOAL_DEFAULT;
+  const theme = (state.prefs.theme === "dark") ? "dark" : "light";
 
   el.innerHTML = `
     <div class="card">
       <div class="big">Settings</div>
-      <div class="muted" style="margin-top:8px">Adjust chunk sizing to make cards feel more like “slides”.</div>
+      <div class="muted" style="margin-top:8px">Light mode by default with a softer dark mode toggle.</div>
+
+      <div class="row" style="margin-top:12px; justify-content:space-between">
+        <div>
+          <div style="font-weight:750">Theme</div>
+          <div class="muted">${theme === "dark" ? "Dark (soft)" : "Light (default)"}</div>
+        </div>
+        <div class="toggleRow">
+          <span class="muted">Light</span>
+          <label class="switch">
+            <input id="themeToggle" type="checkbox" ${theme==="dark"?"checked":""}/>
+            <span class="slider"></span>
+          </label>
+          <span class="muted">Dark</span>
+        </div>
+      </div>
+
+      <div class="muted" style="margin-top:14px">Adjust chunk sizing to make cards feel more like “slides”.</div>
 
       <div class="row" style="margin-top:12px">
         <span class="muted">Min chunk</span>
@@ -796,40 +822,35 @@ function renderSettings() {
       <div class="row" style="margin-top:12px">
         <span class="muted">Daily goal</span>
         <input id="dailyGoal" type="number" min="5" max="300" value="${goal}">
-        <button id="saveSettings">Save</button>
+        <button class="primary" id="saveSettings">Save</button>
       </div>
 
       <div class="muted" style="margin-top:10px">
-        Recommended starting point: <span class="kbd">Min 350</span> / <span class="kbd">Max 900</span>.
-        If your cards are too long, lower Max. If they’re too chopped up, raise Max.
+        Recommended: <span class="kbd">Min 350</span> / <span class="kbd">Max 900</span>.
       </div>
     </div>
 
     <div class="card danger">
-      <div class="big">Rebuild cards (advanced)</div>
-      <div class="muted" style="margin-top:8px">
-        If you change chunk sizing after importing, your existing cards won't automatically re-chunk.
-        You can delete and re-import a doc in <b>Library</b>, or rebuild all cards below.
-      </div>
-      <div class="actions">
-        <button id="rebuildAll">Rebuild cards from stored docs</button>
-      </div>
+      <div class="big">Rebuild cards</div>
+      <div class="muted" style="margin-top:8px">If you change chunk sizing after importing, rebuild cards from stored docs below.</div>
+      <div class="actions"><button id="rebuildAll">Rebuild cards from stored docs</button></div>
     </div>
   `;
+
+  document.getElementById("themeToggle").onchange = (e) => {
+    state.prefs.theme = e.target.checked ? "dark" : "light";
+    saveState(state);
+    applyTheme();
+    renderAll();
+  };
 
   document.getElementById("saveSettings").onclick = () => {
     const minV = parseInt(document.getElementById("minChunk").value, 10);
     const maxV = parseInt(document.getElementById("maxChunk").value, 10);
     const goalV = parseInt(document.getElementById("dailyGoal").value, 10);
 
-    if (!(minV >= 150 && maxV >= 250 && minV < maxV)) {
-      alert("Please use valid values (Min < Max).");
-      return;
-    }
-    if (!(goalV >= 5 && goalV <= 300)) {
-      alert("Daily goal must be between 5 and 300.");
-      return;
-    }
+    if (!(minV >= 150 && maxV >= 250 && minV < maxV)) { alert("Please use valid values (Min < Max)."); return; }
+    if (!(goalV >= 5 && goalV <= 300)) { alert("Daily goal must be between 5 and 300."); return; }
 
     state.prefs.minChunkSize = minV;
     state.prefs.maxChunkSize = maxV;
@@ -841,14 +862,11 @@ function renderSettings() {
 
   document.getElementById("rebuildAll").onclick = () => {
     if (!state.docs.length) { alert("No docs stored yet."); return; }
-
     const keepDocs = [...state.docs];
     state.cards = [];
     for (const d of keepDocs) {
-      const newCards = chunkTextToCards(d.id, d.text, state.prefs.minChunkSize, state.prefs.maxChunkSize);
-      state.cards.push(...newCards);
+      state.cards.push(...chunkTextToCards(d.id, d.text, state.prefs.minChunkSize, state.prefs.maxChunkSize));
     }
-
     state.prefs.flip = false;
     saveState(state);
     renderAll();
@@ -857,6 +875,7 @@ function renderSettings() {
 }
 
 function renderAll() {
+  applyTheme();
   updateCounts();
   renderHome();
   renderStudy();
@@ -866,14 +885,13 @@ function renderAll() {
   renderSettings();
 }
 
-// Service worker registration (offline)
+// Register service worker
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", async () => {
     try { await navigator.serviceWorker.register("./sw.js"); } catch {}
   });
 }
 
-renderTabs();
 renderAll();
 </script>
 </body>

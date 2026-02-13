@@ -1,9 +1,9 @@
 {
   "name": "SKT Study",
   "short_name": "SKT Study",
-  "start_url": "./index.html",
+  "start_url": "./",
   "display": "standalone",
-  "background_color": "#0b0b0b",
-  "theme_color": "#111111",
+  "background_color": "#F6F8FB",
+  "theme_color": "#F6F8FB",
   "icons": []
 }
