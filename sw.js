@@ -1,4 +1,4 @@
-const CACHE_NAME = "skt-study-cache-v2";
+const CACHE_NAME = "skt-study-cache-v4";
 const ASSETS = ["./", "./index.html", "./manifest.webmanifest", "./sw.js"];
 
 self.addEventListener("install", (event) => {
@@ -16,7 +16,6 @@ self.addEventListener("activate", (event) => {
 });
 
 self.addEventListener("fetch", (event) => {
-  // Network-first for external CDN (pdf.js). Cache-first for our own assets.
   const url = new URL(event.request.url);
   if (url.origin !== location.origin) {
     event.respondWith(fetch(event.request).catch(() => caches.match(event.request)));

@@ -11,7 +11,7 @@
     body { margin: 0; background:#0b0b0b; color:#f2f2f2; }
     header { padding: 14px 16px; position: sticky; top: 0; background:#0b0b0bcc; backdrop-filter: blur(10px); border-bottom: 1px solid #222; }
     h1 { margin: 0; font-size: 16px; font-weight: 700; letter-spacing: .2px; }
-    main { padding: 14px 16px 90px; max-width: 920px; margin: 0 auto; }
+    main { padding: 14px 16px 108px; max-width: 920px; margin: 0 auto; }
     .row { display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
     button, select, input[type="file"], input[type="text"], input[type="number"] {
       background:#141414; color:#f2f2f2; border: 1px solid #2a2a2a;
@@ -21,7 +21,7 @@
     button:hover { border-color:#3a3a3a; }
     .card {
       margin-top: 14px; padding: 16px; border: 1px solid #252525; background:#101010;
-      border-radius: 16px; box-shadow: 0 6px 20px rgba(0,0,0,.25);
+      border-radius: 18px; box-shadow: 0 6px 20px rgba(0,0,0,.25);
     }
     .muted { color:#b8b8b8; font-size: 13px; }
     .pill { display:inline-flex; gap:6px; align-items:center; padding: 6px 10px; border-radius: 999px; border:1px solid #2a2a2a; background:#0f0f0f; }
@@ -44,8 +44,10 @@
     }
     footerNav .row { max-width:920px; width:100%; justify-content:space-between; }
     .smallBtn { padding: 8px 10px; border-radius: 12px; }
-    .spacer { flex:1; }
     .kbd { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace; font-size: 12px; padding: 2px 6px; border-radius: 8px; border:1px solid #2a2a2a; background:#0f0f0f; color:#ddd; }
+    .progressWrap { margin-top: 10px; border:1px solid #2a2a2a; border-radius: 999px; overflow:hidden; }
+    .progressBar { height: 10px; background:#f2f2f2; width: 0%; }
+    .badge { display:inline-flex; align-items:center; gap:8px; padding: 8px 10px; border-radius: 14px; border:1px solid #2a2a2a; background:#0f0f0f; }
   </style>
 
   <!-- PDF.js (client-side PDF text extraction) -->
@@ -54,9 +56,17 @@
 
 <body>
 <header>
-  <h1>SKT Study</h1>
+  <div class="row" style="justify-content:space-between">
+    <h1>SKT Study</h1>
+    <div class="row" style="gap:8px">
+      <span class="pill">XP <span id="xpTop">0</span></span>
+      <span class="pill">Lvl <span id="lvlTop">1</span></span>
+    </div>
+  </div>
+
   <div class="tabs">
-    <div class="tab active" data-tab="study">Study</div>
+    <div class="tab active" data-tab="home">Home</div>
+    <div class="tab" data-tab="study">Study</div>
     <div class="tab" data-tab="quiz">Quiz</div>
     <div class="tab" data-tab="library">Library</div>
     <div class="tab" data-tab="stats">Stats</div>
@@ -65,7 +75,8 @@
 </header>
 
 <main>
-  <div id="study" class="panel"></div>
+  <div id="home" class="panel"></div>
+  <div id="study" class="panel" style="display:none"></div>
   <div id="quiz" class="panel" style="display:none"></div>
   <div id="library" class="panel" style="display:none"></div>
   <div id="stats" class="panel" style="display:none"></div>
@@ -77,28 +88,29 @@
     <span class="pill"><span id="countCards">0</span> cards</span>
     <span class="pill">Streak: <span id="streak">0</span></span>
     <span class="pill">Due: <span id="dueCount">0</span></span>
+    <span class="pill">Today: <span id="dailyDone">0</span>/40</span>
     <button class="smallBtn" id="resetBtn" title="Reset progress (keeps imported text)">Reset Progress</button>
   </div>
 </footerNav>
 
 <script>
 /**
- * Minimal SKT study app (PWA)
- * - Import PDF/TXT/MD -> generate "cards" (chunks)
- * - Study mode: Again/Good with simple spacing
- * - Quiz mode: Cloze from card text
- * - Stats: accuracy + weakest cards
+ * SKT Study v4 (merged)
+ * - Full importer + cards + cloze quiz + stats + settings
+ * - Home "Today's Mission" + XP/Levels + badges (subtle)
  *
  * Storage (localStorage):
  * state = {
  *   docs: [{id, name, createdAt, text}],
  *   cards: [{id, docId, title, body, ease, dueAt, seen, correct, wrong}],
- *   prefs: {activeDocId, flip, chunkSize, maxChunkSize},
- *   stats: {streak, lastStudyDay}
+ *   prefs: {activeDocId, flip, minChunkSize, maxChunkSize},
+ *   stats: {streak, lastStudyDay},
+ *   game: {xp, dailyDone, dailyGoal, lastDailyDay, badges:{}}
  * }
  */
 
-const LS_KEY = "sktStudy_v2";
+const LS_KEY = "sktStudy_v4";
+const DAILY_GOAL_DEFAULT = 40;
 const now = () => Date.now();
 
 function defaultState() {
@@ -108,11 +120,17 @@ function defaultState() {
     prefs: {
       activeDocId: "",
       flip: false,
-      // chunk sizing
       minChunkSize: 350,
       maxChunkSize: 900
     },
-    stats: { streak: 0, lastStudyDay: "" }
+    stats: { streak: 0, lastStudyDay: "" },
+    game: {
+      xp: 0,
+      dailyDone: 0,
+      dailyGoal: DAILY_GOAL_DEFAULT,
+      lastDailyDay: "",
+      badges: {} // {badgeId: true}
+    }
   };
 }
 
@@ -121,7 +139,15 @@ function loadState() {
     const raw = localStorage.getItem(LS_KEY);
     if (!raw) return defaultState();
     const s = JSON.parse(raw);
-    return { ...defaultState(), ...s, prefs: { ...defaultState().prefs, ...(s.prefs || {}) }, stats: { ...defaultState().stats, ...(s.stats || {}) } };
+    // shallow merge + nested merges
+    const d = defaultState();
+    return {
+      ...d,
+      ...s,
+      prefs: { ...d.prefs, ...(s.prefs || {}) },
+      stats: { ...d.stats, ...(s.stats || {}) },
+      game: { ...d.game, ...(s.game || {}) , badges: { ...(d.game.badges || {}), ...((s.game||{}).badges || {}) } }
+    };
   } catch {
     return defaultState();
   }
@@ -139,6 +165,15 @@ function todayKey() {
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
 }
 
+function resetDailyIfNeeded() {
+  const tk = todayKey();
+  if (state.game.lastDailyDay !== tk) {
+    state.game.dailyDone = 0;
+    state.game.lastDailyDay = tk;
+    saveState(state);
+  }
+}
+
 function bumpStreak() {
   const tk = todayKey();
   if (state.stats.lastStudyDay === tk) return;
@@ -154,6 +189,45 @@ function bumpStreak() {
   saveState(state);
 }
 
+function calcLevelFromXP(xp) {
+  // clean and predictable: 250 XP per level
+  return Math.floor((xp || 0) / 250) + 1;
+}
+
+function awardXP(amount) {
+  resetDailyIfNeeded();
+  state.game.xp = (state.game.xp || 0) + amount;
+  saveState(state);
+}
+
+function incrementDailyDone(n=1) {
+  resetDailyIfNeeded();
+  state.game.dailyDone = Math.max(0, (state.game.dailyDone || 0) + n);
+  saveState(state);
+}
+
+function earnBadge(id) {
+  if (!state.game.badges) state.game.badges = {};
+  if (!state.game.badges[id]) {
+    state.game.badges[id] = true;
+    saveState(state);
+  }
+}
+
+function evaluateBadges() {
+  // subtle, non-cringe badges
+  if (state.docs.length >= 1) earnBadge("first_import");
+  if ((state.stats.streak || 0) >= 3) earnBadge("streak_3");
+  const totalSeen = state.cards.reduce((a,c)=>a+(c.seen||0),0);
+  if (totalSeen >= 100) earnBadge("review_100");
+  if (totalSeen >= 500) earnBadge("review_500");
+  const totalAttempts = state.cards.reduce((a,c)=>a+((c.correct||0)+(c.wrong||0)),0);
+  const totalCorrect = state.cards.reduce((a,c)=>a+(c.correct||0),0);
+  const acc = totalAttempts ? (totalCorrect / totalAttempts) : 0;
+  if (totalAttempts >= 100 && acc >= 0.80) earnBadge("acc_80");
+}
+
+// --- Docs / Cards ---
 function activeDoc() {
   if (!state.prefs.activeDocId && state.docs[0]) {
     state.prefs.activeDocId = state.docs[0].id;
@@ -161,13 +235,11 @@ function activeDoc() {
   }
   return state.docs.find(d => d.id === state.prefs.activeDocId) || null;
 }
-
 function setActiveDoc(docId) {
   state.prefs.activeDocId = docId;
   saveState(state);
   renderAll();
 }
-
 function cardsForDoc(docId) { return state.cards.filter(c => c.docId === docId); }
 
 function dueCount() {
@@ -175,14 +247,28 @@ function dueCount() {
 }
 
 function updateCounts() {
+  evaluateBadges();
+  resetDailyIfNeeded();
+
   document.getElementById("countCards").textContent = state.cards.length;
   document.getElementById("streak").textContent = state.stats.streak || 0;
   document.getElementById("dueCount").textContent = dueCount();
+  document.getElementById("dailyDone").textContent = state.game.dailyDone || 0;
+
+  const xp = state.game.xp || 0;
+  const lvl = calcLevelFromXP(xp);
+  document.getElementById("xpTop").textContent = xp;
+  document.getElementById("lvlTop").textContent = lvl;
 }
 
 function resetProgress() {
+  // keep docs + card text, reset scheduling/performance + daily progress
   state.cards = state.cards.map(c => ({...c, ease: 2.5, dueAt: 0, seen: 0, correct: 0, wrong: 0}));
   state.prefs.flip = false;
+  state.stats.streak = 0;
+  state.stats.lastStudyDay = "";
+  state.game.dailyDone = 0;
+  state.game.lastDailyDay = todayKey();
   saveState(state);
   renderAll();
 }
@@ -201,11 +287,9 @@ async function extractPdfText(file) {
   }
   return text;
 }
-
 async function readTextFile(file) { return await file.text(); }
 
-// --- Chunking logic ---
-// Heuristic chunking: split on separators/blank lines; then pack into chunks between min/max chars.
+// Chunking: split on blank lines / page markers; pack into min/max.
 function chunkTextToCards(docId, rawText, minSize, maxSize) {
   const cleaned = rawText
     .replace(/\r/g, "")
@@ -246,14 +330,12 @@ function chunkTextToCards(docId, rawText, minSize, maxSize) {
     if (candidateLen <= maxSize) {
       buffer += (buffer ? "\n\n" : "") + part;
     } else {
-      // if current buffer is already decent, flush it
       if (buffer.length >= minSize) flushBuffer();
-      else if (buffer) { flushBuffer(); }
+      else if (buffer) flushBuffer();
 
       if (part.length <= maxSize) {
         buffer = part;
       } else {
-        // slice big part
         for (let i = 0; i < part.length; i += (maxSize - 50)) {
           const slice = part.slice(i, i + (maxSize - 50));
           buffer = slice;
@@ -327,17 +409,56 @@ function escapeHtml(s) {
 }
 
 // --- UI ---
+function switchTab(tab) {
+  document.querySelectorAll(".tab").forEach(x => x.classList.remove("active"));
+  document.querySelector(`.tab[data-tab="${tab}"]`)?.classList.add("active");
+  document.querySelectorAll(".panel").forEach(p => p.style.display = "none");
+  document.getElementById(tab).style.display = "";
+  renderAll();
+}
+
 function renderTabs() {
   document.querySelectorAll(".tab").forEach(t => {
-    t.addEventListener("click", () => {
-      document.querySelectorAll(".tab").forEach(x => x.classList.remove("active"));
-      t.classList.add("active");
-      const tab = t.dataset.tab;
-      document.querySelectorAll(".panel").forEach(p => p.style.display = "none");
-      document.getElementById(tab).style.display = "";
-      renderAll();
-    });
+    t.addEventListener("click", () => switchTab(t.dataset.tab));
   });
+}
+
+function renderHome() {
+  const el = document.getElementById("home");
+  resetDailyIfNeeded();
+
+  const goal = state.game.dailyGoal || DAILY_GOAL_DEFAULT;
+  const done = state.game.dailyDone || 0;
+  const pct = Math.min(100, Math.round((done / goal) * 100));
+
+  const due = dueCount();
+  const doc = activeDoc();
+  const activeName = doc ? doc.name : "None";
+
+  el.innerHTML = `
+    <div class="card">
+      <div class="big">Today's Mission</div>
+      <div class="muted" style="margin-top:6px">Goal: <b>${goal}</b> questions · Due now: <b>${due}</b></div>
+      <div class="muted" style="margin-top:6px">Active: ${escapeHtml(activeName)}</div>
+
+      <div class="progressWrap"><div class="progressBar" style="width:${pct}%"></div></div>
+      <div class="muted" style="margin-top:8px">${done} / ${goal} complete (${pct}%)</div>
+
+      <div class="actions">
+        <button id="startStudy">Start Studying</button>
+        <button id="startQuiz">Quick Quiz</button>
+        <button id="goLibrary">Import Doc</button>
+      </div>
+
+      <div class="muted" style="margin-top:10px">
+        XP increases on every answer. Keep it simple: stack reps.
+      </div>
+    </div>
+  `;
+
+  document.getElementById("startStudy").onclick = () => switchTab("study");
+  document.getElementById("startQuiz").onclick = () => switchTab("quiz");
+  document.getElementById("goLibrary").onclick = () => switchTab("library");
 }
 
 function renderStudy() {
@@ -394,16 +515,28 @@ function renderStudy() {
     saveState(state);
     renderStudy();
   };
+
   document.getElementById("againBtn").onclick = () => {
     bumpStreak();
+    incrementDailyDone(1);
+    awardXP(2);
+
     const upd = schedule(next, "again");
     upsertCard(upd);
+    saveState(state);
+
     renderAll();
   };
+
   document.getElementById("goodBtn").onclick = () => {
     bumpStreak();
+    incrementDailyDone(1);
+    awardXP(10);
+
     const upd = schedule(next, "good");
     upsertCard(upd);
+    saveState(state);
+
     renderAll();
   };
 }
@@ -464,14 +597,21 @@ function renderQuiz() {
 
   document.getElementById("checkBtn").onclick = () => {
     bumpStreak();
+    incrementDailyDone(1);
+
     const guess = document.getElementById("ans").value.trim();
     const ok = guess.toLowerCase() === cloze.answer.toLowerCase();
+
     document.getElementById("feedback").innerHTML = ok
       ? `✅ Correct`
       : `❌ Correct answer: <b>${escapeHtml(cloze.answer)}</b>`;
 
+    awardXP(ok ? 10 : 2);
+
     const upd = schedule(card, ok ? "good" : "again");
     upsertCard(upd);
+    saveState(state);
+    renderAll();
   };
 
   document.getElementById("nextBtn").onclick = () => renderQuiz();
@@ -556,11 +696,16 @@ function renderLibrary() {
 
     const docId = uid("doc");
     state.docs.unshift({ id: docId, name, createdAt: now(), text });
-    const newCards = chunkTextToCards(docId, text, state.prefs.minChunkSize, state.prefs.maxChunkSize);
 
+    const newCards = chunkTextToCards(docId, text, state.prefs.minChunkSize, state.prefs.maxChunkSize);
     state.cards.push(...newCards);
+
     state.prefs.activeDocId = docId;
     state.prefs.flip = false;
+
+    // badge trigger
+    earnBadge("first_import");
+
     saveState(state);
     renderAll();
   };
@@ -568,24 +713,52 @@ function renderLibrary() {
 
 function renderStats() {
   const el = document.getElementById("stats");
+
   const totalSeen = state.cards.reduce((a,c)=>a+(c.seen||0),0);
   const totalCorrect = state.cards.reduce((a,c)=>a+(c.correct||0),0);
   const totalWrong = state.cards.reduce((a,c)=>a+(c.wrong||0),0);
-  const acc = (totalCorrect + totalWrong) ? Math.round(100 * totalCorrect / (totalCorrect + totalWrong)) : 0;
+  const totalAttempts = totalCorrect + totalWrong;
+  const acc = totalAttempts ? Math.round(100 * totalCorrect / totalAttempts) : 0;
 
   const weakest = [...state.cards]
     .filter(c => (c.seen||0) >= 2)
     .sort((a,b) => ((b.wrong||0)/(b.seen||1)) - ((a.wrong||0)/(a.seen||1)))
     .slice(0, 8);
 
+  const xp = state.game.xp || 0;
+  const lvl = calcLevelFromXP(xp);
+  const goal = state.game.dailyGoal || DAILY_GOAL_DEFAULT;
+  const done = state.game.dailyDone || 0;
+  const pct = Math.min(100, Math.round((done / goal) * 100));
+
+  const badges = state.game.badges || {};
+  const badgeList = [
+    {id:"first_import", label:"📘 First import"},
+    {id:"streak_3", label:"🔥 3-day streak"},
+    {id:"review_100", label:"✅ 100 reviews"},
+    {id:"review_500", label:"🏆 500 reviews"},
+    {id:"acc_80", label:"🎯 80%+ accuracy (100+ attempts)"}
+  ].filter(b => badges[b.id]);
+
   el.innerHTML = `
     <div class="card">
       <div class="big">Progress</div>
       <div class="grid" style="margin-top:12px">
         <div class="stat ok"><div class="muted">Accuracy</div><div class="big">${acc}%</div></div>
-        <div class="stat"><div class="muted">Cards reviewed</div><div class="big">${totalSeen}</div></div>
-        <div class="stat"><div class="muted">Correct</div><div class="big">${totalCorrect}</div></div>
-        <div class="stat"><div class="muted">Wrong</div><div class="big">${totalWrong}</div></div>
+        <div class="stat"><div class="muted">Level</div><div class="big">${lvl}</div></div>
+        <div class="stat"><div class="muted">XP</div><div class="big">${xp}</div></div>
+        <div class="stat"><div class="muted">Today</div><div class="big">${done}/${goal}</div></div>
+      </div>
+
+      <div class="progressWrap"><div class="progressBar" style="width:${pct}%"></div></div>
+      <div class="muted" style="margin-top:8px">${pct}% of daily goal</div>
+    </div>
+
+    <div class="card">
+      <div class="big">Badges</div>
+      <div class="muted" style="margin-top:8px">Lightweight milestones—just enough to keep momentum.</div>
+      <div class="row" style="margin-top:12px">
+        ${badgeList.length ? badgeList.map(b => `<span class="badge">${escapeHtml(b.label)}</span>`).join("") : `<span class="muted">No badges yet. Import a doc and start grinding reps.</span>`}
       </div>
     </div>
 
@@ -606,6 +779,8 @@ function renderStats() {
 
 function renderSettings() {
   const el = document.getElementById("settings");
+  const goal = state.game.dailyGoal || DAILY_GOAL_DEFAULT;
+
   el.innerHTML = `
     <div class="card">
       <div class="big">Settings</div>
@@ -616,6 +791,11 @@ function renderSettings() {
         <input id="minChunk" type="number" min="150" max="1200" value="${state.prefs.minChunkSize}">
         <span class="muted">Max chunk</span>
         <input id="maxChunk" type="number" min="250" max="2500" value="${state.prefs.maxChunkSize}">
+      </div>
+
+      <div class="row" style="margin-top:12px">
+        <span class="muted">Daily goal</span>
+        <input id="dailyGoal" type="number" min="5" max="300" value="${goal}">
         <button id="saveSettings">Save</button>
       </div>
 
@@ -628,7 +808,7 @@ function renderSettings() {
     <div class="card danger">
       <div class="big">Rebuild cards (advanced)</div>
       <div class="muted" style="margin-top:8px">
-        If you change chunk sizing <i>after</i> importing, your existing cards won't automatically re-chunk.
+        If you change chunk sizing after importing, your existing cards won't automatically re-chunk.
         You can delete and re-import a doc in <b>Library</b>, or rebuild all cards below.
       </div>
       <div class="actions">
@@ -640,25 +820,35 @@ function renderSettings() {
   document.getElementById("saveSettings").onclick = () => {
     const minV = parseInt(document.getElementById("minChunk").value, 10);
     const maxV = parseInt(document.getElementById("maxChunk").value, 10);
+    const goalV = parseInt(document.getElementById("dailyGoal").value, 10);
+
     if (!(minV >= 150 && maxV >= 250 && minV < maxV)) {
       alert("Please use valid values (Min < Max).");
       return;
     }
+    if (!(goalV >= 5 && goalV <= 300)) {
+      alert("Daily goal must be between 5 and 300.");
+      return;
+    }
+
     state.prefs.minChunkSize = minV;
     state.prefs.maxChunkSize = maxV;
+    state.game.dailyGoal = goalV;
+
     saveState(state);
     renderAll();
   };
 
   document.getElementById("rebuildAll").onclick = () => {
     if (!state.docs.length) { alert("No docs stored yet."); return; }
-    // rebuild: clear cards; recreate from doc.text
+
     const keepDocs = [...state.docs];
     state.cards = [];
     for (const d of keepDocs) {
       const newCards = chunkTextToCards(d.id, d.text, state.prefs.minChunkSize, state.prefs.maxChunkSize);
       state.cards.push(...newCards);
     }
+
     state.prefs.flip = false;
     saveState(state);
     renderAll();
@@ -668,6 +858,7 @@ function renderSettings() {
 
 function renderAll() {
   updateCounts();
+  renderHome();
   renderStudy();
   renderQuiz();
   renderLibrary();
