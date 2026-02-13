@@ -1,1 +1,689 @@
-<!doctype html><html><head><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'><title>SKT Study</title></head><body><h1>SKT Study App Starter</h1><p>Upload your PDFs in the Library tab once deployed.</p></body></html>
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>SKT Study</title>
+  <meta name="theme-color" content="#111111" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <style>
+    :root { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; }
+    body { margin: 0; background:#0b0b0b; color:#f2f2f2; }
+    header { padding: 14px 16px; position: sticky; top: 0; background:#0b0b0bcc; backdrop-filter: blur(10px); border-bottom: 1px solid #222; }
+    h1 { margin: 0; font-size: 16px; font-weight: 700; letter-spacing: .2px; }
+    main { padding: 14px 16px 90px; max-width: 920px; margin: 0 auto; }
+    .row { display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+    button, select, input[type="file"], input[type="text"], input[type="number"] {
+      background:#141414; color:#f2f2f2; border: 1px solid #2a2a2a;
+      padding: 10px 12px; border-radius: 12px; font-weight: 650;
+    }
+    input[type="text"], input[type="number"] { font-weight: 600; }
+    button:hover { border-color:#3a3a3a; }
+    .card {
+      margin-top: 14px; padding: 16px; border: 1px solid #252525; background:#101010;
+      border-radius: 16px; box-shadow: 0 6px 20px rgba(0,0,0,.25);
+    }
+    .muted { color:#b8b8b8; font-size: 13px; }
+    .pill { display:inline-flex; gap:6px; align-items:center; padding: 6px 10px; border-radius: 999px; border:1px solid #2a2a2a; background:#0f0f0f; }
+    .tabs { display:flex; gap:8px; margin-top: 10px; overflow:auto; -webkit-overflow-scrolling: touch; padding-bottom: 2px; }
+    .tab { padding: 8px 12px; border-radius: 999px; border:1px solid #2a2a2a; background:#0f0f0f; cursor:pointer; user-select:none; white-space:nowrap; }
+    .tab.active { border-color:#4a4a4a; background:#141414; }
+    .big { font-size: 18px; font-weight: 750; }
+    .chunk { white-space: pre-wrap; line-height: 1.45; }
+    .actions { display:flex; gap:10px; margin-top: 12px; flex-wrap:wrap; }
+    .grid { display:grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 12px; }
+    .stat { padding: 12px; border-radius: 16px; border:1px solid #252525; background:#0f0f0f; }
+    .danger { border-color:#4a1b1b; background:#130b0b; }
+    .ok { border-color:#1f3a26; background:#0c140f; }
+    a { color:#9ad; }
+    footerNav {
+      position: fixed; bottom: 0; left: 0; right: 0;
+      background:#0b0b0bcc; backdrop-filter: blur(10px);
+      border-top: 1px solid #222; padding: 10px 12px;
+      display:flex; justify-content:center;
+    }
+    footerNav .row { max-width:920px; width:100%; justify-content:space-between; }
+    .smallBtn { padding: 8px 10px; border-radius: 12px; }
+    .spacer { flex:1; }
+    .kbd { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace; font-size: 12px; padding: 2px 6px; border-radius: 8px; border:1px solid #2a2a2a; background:#0f0f0f; color:#ddd; }
+  </style>
+
+  <!-- PDF.js (client-side PDF text extraction) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.2.67/pdf.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+</head>
+
+<body>
+<header>
+  <h1>SKT Study</h1>
+  <div class="tabs">
+    <div class="tab active" data-tab="study">Study</div>
+    <div class="tab" data-tab="quiz">Quiz</div>
+    <div class="tab" data-tab="library">Library</div>
+    <div class="tab" data-tab="stats">Stats</div>
+    <div class="tab" data-tab="settings">Settings</div>
+  </div>
+</header>
+
+<main>
+  <div id="study" class="panel"></div>
+  <div id="quiz" class="panel" style="display:none"></div>
+  <div id="library" class="panel" style="display:none"></div>
+  <div id="stats" class="panel" style="display:none"></div>
+  <div id="settings" class="panel" style="display:none"></div>
+</main>
+
+<footerNav>
+  <div class="row">
+    <span class="pill"><span id="countCards">0</span> cards</span>
+    <span class="pill">Streak: <span id="streak">0</span></span>
+    <span class="pill">Due: <span id="dueCount">0</span></span>
+    <button class="smallBtn" id="resetBtn" title="Reset progress (keeps imported text)">Reset Progress</button>
+  </div>
+</footerNav>
+
+<script>
+/**
+ * Minimal SKT study app (PWA)
+ * - Import PDF/TXT/MD -> generate "cards" (chunks)
+ * - Study mode: Again/Good with simple spacing
+ * - Quiz mode: Cloze from card text
+ * - Stats: accuracy + weakest cards
+ *
+ * Storage (localStorage):
+ * state = {
+ *   docs: [{id, name, createdAt, text}],
+ *   cards: [{id, docId, title, body, ease, dueAt, seen, correct, wrong}],
+ *   prefs: {activeDocId, flip, chunkSize, maxChunkSize},
+ *   stats: {streak, lastStudyDay}
+ * }
+ */
+
+const LS_KEY = "sktStudy_v2";
+const now = () => Date.now();
+
+function defaultState() {
+  return {
+    docs: [],
+    cards: [],
+    prefs: {
+      activeDocId: "",
+      flip: false,
+      // chunk sizing
+      minChunkSize: 350,
+      maxChunkSize: 900
+    },
+    stats: { streak: 0, lastStudyDay: "" }
+  };
+}
+
+function loadState() {
+  try {
+    const raw = localStorage.getItem(LS_KEY);
+    if (!raw) return defaultState();
+    const s = JSON.parse(raw);
+    return { ...defaultState(), ...s, prefs: { ...defaultState().prefs, ...(s.prefs || {}) }, stats: { ...defaultState().stats, ...(s.stats || {}) } };
+  } catch {
+    return defaultState();
+  }
+}
+function saveState(s) { localStorage.setItem(LS_KEY, JSON.stringify(s)); }
+
+let state = loadState();
+
+function uid(prefix="id") {
+  return prefix + "_" + Math.random().toString(16).slice(2) + "_" + Date.now().toString(16);
+}
+
+function todayKey() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+}
+
+function bumpStreak() {
+  const tk = todayKey();
+  if (state.stats.lastStudyDay === tk) return;
+
+  const d = new Date();
+  const y = new Date(d.getFullYear(), d.getMonth(), d.getDate()-1);
+  const yk = `${y.getFullYear()}-${String(y.getMonth()+1).padStart(2,"0")}-${String(y.getDate()).padStart(2,"0")}`;
+
+  if (state.stats.lastStudyDay === yk) state.stats.streak = (state.stats.streak || 0) + 1;
+  else state.stats.streak = 1;
+
+  state.stats.lastStudyDay = tk;
+  saveState(state);
+}
+
+function activeDoc() {
+  if (!state.prefs.activeDocId && state.docs[0]) {
+    state.prefs.activeDocId = state.docs[0].id;
+    saveState(state);
+  }
+  return state.docs.find(d => d.id === state.prefs.activeDocId) || null;
+}
+
+function setActiveDoc(docId) {
+  state.prefs.activeDocId = docId;
+  saveState(state);
+  renderAll();
+}
+
+function cardsForDoc(docId) { return state.cards.filter(c => c.docId === docId); }
+
+function dueCount() {
+  return state.cards.filter(c => !c.dueAt || c.dueAt <= now()).length;
+}
+
+function updateCounts() {
+  document.getElementById("countCards").textContent = state.cards.length;
+  document.getElementById("streak").textContent = state.stats.streak || 0;
+  document.getElementById("dueCount").textContent = dueCount();
+}
+
+function resetProgress() {
+  state.cards = state.cards.map(c => ({...c, ease: 2.5, dueAt: 0, seen: 0, correct: 0, wrong: 0}));
+  state.prefs.flip = false;
+  saveState(state);
+  renderAll();
+}
+document.getElementById("resetBtn").addEventListener("click", resetProgress);
+
+// --- Importers ---
+async function extractPdfText(file) {
+  const arrayBuffer = await file.arrayBuffer();
+  const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+  let text = "";
+  for (let p = 1; p <= pdf.numPages; p++) {
+    const page = await pdf.getPage(p);
+    const content = await page.getTextContent();
+    const strings = content.items.map(it => it.str);
+    text += `\n\n=== Page ${p} ===\n` + strings.join(" ");
+  }
+  return text;
+}
+
+async function readTextFile(file) { return await file.text(); }
+
+// --- Chunking logic ---
+// Heuristic chunking: split on separators/blank lines; then pack into chunks between min/max chars.
+function chunkTextToCards(docId, rawText, minSize, maxSize) {
+  const cleaned = rawText
+    .replace(/\r/g, "")
+    .replace(/[ \t]+/g, " ")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+
+  const parts = cleaned.split(/\n\n+|=== Page \d+ ===/g).map(s => s.trim()).filter(Boolean);
+
+  const cards = [];
+  let buffer = "";
+
+  function titleFrom(text) {
+    const first = (text.split(/[.?!]\s/)[0] || text).trim();
+    return first.slice(0, 90) || "Card";
+  }
+
+  function flushBuffer() {
+    const b = buffer.trim();
+    if (!b) return;
+    cards.push({
+      id: uid("card"),
+      docId,
+      title: titleFrom(b),
+      body: b,
+      ease: 2.5,
+      dueAt: 0,
+      seen: 0,
+      correct: 0,
+      wrong: 0,
+    });
+    buffer = "";
+  }
+
+  for (const part of parts) {
+    const candidateLen = (buffer ? buffer.length + 2 : 0) + part.length;
+
+    if (candidateLen <= maxSize) {
+      buffer += (buffer ? "\n\n" : "") + part;
+    } else {
+      // if current buffer is already decent, flush it
+      if (buffer.length >= minSize) flushBuffer();
+      else if (buffer) { flushBuffer(); }
+
+      if (part.length <= maxSize) {
+        buffer = part;
+      } else {
+        // slice big part
+        for (let i = 0; i < part.length; i += (maxSize - 50)) {
+          const slice = part.slice(i, i + (maxSize - 50));
+          buffer = slice;
+          flushBuffer();
+        }
+      }
+    }
+  }
+  flushBuffer();
+  return cards;
+}
+
+// --- Study scheduling (simple SM-2-ish) ---
+function pickNextCard(docId) {
+  const list = cardsForDoc(docId);
+  if (!list.length) return null;
+
+  const due = list.filter(c => !c.dueAt || c.dueAt <= now());
+  if (due.length) {
+    due.sort((a,b) => (a.dueAt||0) - (b.dueAt||0));
+    return due[0];
+  }
+  const sorted = [...list].sort((a,b) => (a.seen||0) - (b.seen||0));
+  return sorted[0];
+}
+
+function schedule(card, rating /* "again" | "good" */) {
+  const c = {...card};
+  c.seen = (c.seen||0) + 1;
+
+  if (rating === "again") {
+    c.wrong = (c.wrong||0) + 1;
+    c.ease = Math.max(1.3, (c.ease||2.5) - 0.2);
+    c.dueAt = now() + 15 * 60 * 1000; // 15 min
+  } else {
+    c.correct = (c.correct||0) + 1;
+    c.ease = Math.min(3.2, (c.ease||2.5) + 0.05);
+    const days = Math.max(1, Math.round(c.ease * (c.correct - c.wrong + 2)));
+    c.dueAt = now() + days * 24 * 60 * 60 * 1000;
+  }
+  return c;
+}
+
+function upsertCard(updated) {
+  const i = state.cards.findIndex(x => x.id === updated.id);
+  if (i >= 0) state.cards[i] = updated;
+  saveState(state);
+}
+
+// --- Quiz (cloze) ---
+function makeCloze(text) {
+  const words = text.split(/\s+/).filter(Boolean);
+  const candidates = words
+    .map((w, idx) => ({ w: w.replace(/[^\w-]/g,""), idx }))
+    .filter(x => x.w.length >= 6 && !/^\d+$/.test(x.w));
+  if (!candidates.length) return null;
+
+  const pick = candidates[Math.floor(candidates.length * 0.45)];
+  const answer = pick.w;
+  const masked = words.map((w,i) => (i === pick.idx ? "_____" : w)).join(" ");
+  return { masked, answer };
+}
+
+function escapeHtml(s) {
+  return String(s)
+    .replaceAll("&","&amp;")
+    .replaceAll("<","&lt;")
+    .replaceAll(">","&gt;")
+    .replaceAll('"',"&quot;")
+    .replaceAll("'","&#039;");
+}
+
+// --- UI ---
+function renderTabs() {
+  document.querySelectorAll(".tab").forEach(t => {
+    t.addEventListener("click", () => {
+      document.querySelectorAll(".tab").forEach(x => x.classList.remove("active"));
+      t.classList.add("active");
+      const tab = t.dataset.tab;
+      document.querySelectorAll(".panel").forEach(p => p.style.display = "none");
+      document.getElementById(tab).style.display = "";
+      renderAll();
+    });
+  });
+}
+
+function renderStudy() {
+  const el = document.getElementById("study");
+  const doc = activeDoc();
+
+  if (!doc) {
+    el.innerHTML = `
+      <div class="card danger">
+        <div class="big">No material imported yet</div>
+        <div class="muted" style="margin-top:8px">Go to <b>Library</b> → Import a PDF or text file to generate study cards.</div>
+      </div>`;
+    return;
+  }
+
+  const next = pickNextCard(doc.id);
+  if (!next) {
+    el.innerHTML = `
+      <div class="card">
+        <div class="big">No cards for "${escapeHtml(doc.name)}"</div>
+        <div class="muted" style="margin-top:8px">Go to <b>Library</b> → Import to generate cards.</div>
+      </div>`;
+    return;
+  }
+
+  const isFlipped = !!state.prefs.flip;
+
+  el.innerHTML = `
+    <div class="card">
+      <div class="row" style="justify-content:space-between">
+        <div>
+          <div class="muted">Active: ${escapeHtml(doc.name)}</div>
+          <div class="big" style="margin-top:6px">${escapeHtml(next.title)}</div>
+        </div>
+        <button id="flipBtn">${isFlipped ? "Hide" : "Show"}</button>
+      </div>
+
+      <div style="margin-top:12px" class="chunk">
+        ${isFlipped ? escapeHtml(next.body) : "<span class='muted'>Tap <b>Show</b> to reveal the text</span>"}
+      </div>
+
+      <div class="actions">
+        <button id="againBtn">Again</button>
+        <button id="goodBtn">Good</button>
+      </div>
+
+      <div class="muted" style="margin-top:10px">
+        Seen: ${next.seen || 0} · Correct: ${next.correct || 0} · Wrong: ${next.wrong || 0}
+      </div>
+    </div>`;
+
+  document.getElementById("flipBtn").onclick = () => {
+    state.prefs.flip = !state.prefs.flip;
+    saveState(state);
+    renderStudy();
+  };
+  document.getElementById("againBtn").onclick = () => {
+    bumpStreak();
+    const upd = schedule(next, "again");
+    upsertCard(upd);
+    renderAll();
+  };
+  document.getElementById("goodBtn").onclick = () => {
+    bumpStreak();
+    const upd = schedule(next, "good");
+    upsertCard(upd);
+    renderAll();
+  };
+}
+
+function renderQuiz() {
+  const el = document.getElementById("quiz");
+  const doc = activeDoc();
+
+  if (!doc) {
+    el.innerHTML = `
+      <div class="card danger">
+        <div class="big">No material imported yet</div>
+        <div class="muted" style="margin-top:8px">Import a PDF or text file first.</div>
+      </div>`;
+    return;
+  }
+
+  const list = cardsForDoc(doc.id);
+  if (!list.length) {
+    el.innerHTML = `
+      <div class="card">
+        <div class="big">No cards available</div>
+        <div class="muted" style="margin-top:8px">Go to <b>Library</b> → Import to generate cards.</div>
+      </div>`;
+    return;
+  }
+
+  const card = pickNextCard(doc.id) || list[0];
+  const cloze = makeCloze(card.body);
+
+  if (!cloze) {
+    el.innerHTML = `
+      <div class="card">
+        <div class="big">Quiz not available for this card</div>
+        <div class="muted" style="margin-top:8px">Try another card.</div>
+        <button id="nextQ" style="margin-top:12px">Next</button>
+      </div>`;
+    document.getElementById("nextQ").onclick = () => renderQuiz();
+    return;
+  }
+
+  el.innerHTML = `
+    <div class="card">
+      <div class="muted">Cloze quiz · ${escapeHtml(doc.name)}</div>
+      <div class="big" style="margin-top:8px">${escapeHtml(card.title)}</div>
+      <div class="chunk" style="margin-top:12px">${escapeHtml(cloze.masked)}</div>
+
+      <div style="margin-top:12px" class="row">
+        <input id="ans" style="flex:1; min-width:220px" placeholder="Type the missing word" />
+        <button id="checkBtn">Check</button>
+      </div>
+      <div id="feedback" class="muted" style="margin-top:10px"></div>
+
+      <div class="actions">
+        <button id="nextBtn">Next</button>
+      </div>
+    </div>`;
+
+  document.getElementById("checkBtn").onclick = () => {
+    bumpStreak();
+    const guess = document.getElementById("ans").value.trim();
+    const ok = guess.toLowerCase() === cloze.answer.toLowerCase();
+    document.getElementById("feedback").innerHTML = ok
+      ? `✅ Correct`
+      : `❌ Correct answer: <b>${escapeHtml(cloze.answer)}</b>`;
+
+    const upd = schedule(card, ok ? "good" : "again");
+    upsertCard(upd);
+  };
+
+  document.getElementById("nextBtn").onclick = () => renderQuiz();
+}
+
+function renderLibrary() {
+  const el = document.getElementById("library");
+  const opts = state.docs.map(d => `<option value="${d.id}" ${state.prefs.activeDocId===d.id?"selected":""}>${escapeHtml(d.name)}</option>`).join("");
+
+  el.innerHTML = `
+    <div class="card">
+      <div class="big">Import your SKT material</div>
+      <div class="muted" style="margin-top:8px">PDF extraction happens on-device. Your docs are not uploaded anywhere by this app.</div>
+
+      <div class="row" style="margin-top:12px">
+        <input type="file" id="fileInput" accept=".pdf,.txt,.md" />
+        <button id="importBtn">Import</button>
+      </div>
+
+      <div class="row" style="margin-top:12px">
+        <span class="muted">Active document</span>
+        <select id="docSelect">${opts || ""}</select>
+        <button id="deleteDocBtn">Delete Doc</button>
+      </div>
+
+      <div class="muted" style="margin-top:10px">
+        Tip: start by importing one doc (ex: UFC) so chunks look clean, then adjust chunk sizing in <b>Settings</b>.
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="big">Documents</div>
+      <div class="muted" style="margin-top:8px">Each import creates a new document and generates cards.</div>
+
+      <div style="margin-top:12px" class="grid">
+        ${state.docs.map(d => `
+          <div class="stat">
+            <div style="font-weight:750">${escapeHtml(d.name)}</div>
+            <div class="muted">${new Date(d.createdAt).toLocaleString()}</div>
+            <div class="muted" style="margin-top:8px">${cardsForDoc(d.id).length} cards</div>
+            <div class="actions" style="margin-top:10px">
+              <button data-open="${d.id}">Set Active</button>
+            </div>
+          </div>
+        `).join("") || `<div class="muted">No documents yet.</div>`}
+      </div>
+    </div>
+  `;
+
+  el.querySelectorAll("button[data-open]").forEach(btn => {
+    btn.onclick = () => setActiveDoc(btn.dataset.open);
+  });
+
+  const docSelect = document.getElementById("docSelect");
+  if (docSelect) docSelect.onchange = () => setActiveDoc(docSelect.value);
+
+  document.getElementById("deleteDocBtn").onclick = () => {
+    const doc = activeDoc();
+    if (!doc) return;
+    state.docs = state.docs.filter(d => d.id !== doc.id);
+    state.cards = state.cards.filter(c => c.docId !== doc.id);
+    state.prefs.activeDocId = state.docs[0]?.id || "";
+    saveState(state);
+    renderAll();
+  };
+
+  document.getElementById("importBtn").onclick = async () => {
+    const fi = document.getElementById("fileInput");
+    const file = fi.files && fi.files[0];
+    if (!file) { alert("Choose a PDF, TXT, or MD file first."); return; }
+
+    const name = file.name;
+    let text = "";
+    try {
+      if (name.toLowerCase().endsWith(".pdf")) text = await extractPdfText(file);
+      else text = await readTextFile(file);
+    } catch (e) {
+      console.error(e);
+      alert("Could not read file. If it's a PDF, try exporting to TXT or a different PDF.");
+      return;
+    }
+
+    const docId = uid("doc");
+    state.docs.unshift({ id: docId, name, createdAt: now(), text });
+    const newCards = chunkTextToCards(docId, text, state.prefs.minChunkSize, state.prefs.maxChunkSize);
+
+    state.cards.push(...newCards);
+    state.prefs.activeDocId = docId;
+    state.prefs.flip = false;
+    saveState(state);
+    renderAll();
+  };
+}
+
+function renderStats() {
+  const el = document.getElementById("stats");
+  const totalSeen = state.cards.reduce((a,c)=>a+(c.seen||0),0);
+  const totalCorrect = state.cards.reduce((a,c)=>a+(c.correct||0),0);
+  const totalWrong = state.cards.reduce((a,c)=>a+(c.wrong||0),0);
+  const acc = (totalCorrect + totalWrong) ? Math.round(100 * totalCorrect / (totalCorrect + totalWrong)) : 0;
+
+  const weakest = [...state.cards]
+    .filter(c => (c.seen||0) >= 2)
+    .sort((a,b) => ((b.wrong||0)/(b.seen||1)) - ((a.wrong||0)/(a.seen||1)))
+    .slice(0, 8);
+
+  el.innerHTML = `
+    <div class="card">
+      <div class="big">Progress</div>
+      <div class="grid" style="margin-top:12px">
+        <div class="stat ok"><div class="muted">Accuracy</div><div class="big">${acc}%</div></div>
+        <div class="stat"><div class="muted">Cards reviewed</div><div class="big">${totalSeen}</div></div>
+        <div class="stat"><div class="muted">Correct</div><div class="big">${totalCorrect}</div></div>
+        <div class="stat"><div class="muted">Wrong</div><div class="big">${totalWrong}</div></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="big">Weakest cards</div>
+      <div class="muted" style="margin-top:8px">Based on wrong/seen ratio (minimum 2 attempts).</div>
+      <div style="margin-top:12px" class="grid">
+        ${weakest.map(c => `
+          <div class="stat danger">
+            <div style="font-weight:800">${escapeHtml(c.title)}</div>
+            <div class="muted" style="margin-top:6px">Wrong: ${c.wrong||0} / Seen: ${c.seen||0}</div>
+          </div>
+        `).join("") || `<div class="muted">No weak cards yet—do a few rounds in Study/Quiz.</div>`}
+      </div>
+    </div>
+  `;
+}
+
+function renderSettings() {
+  const el = document.getElementById("settings");
+  el.innerHTML = `
+    <div class="card">
+      <div class="big">Settings</div>
+      <div class="muted" style="margin-top:8px">Adjust chunk sizing to make cards feel more like “slides”.</div>
+
+      <div class="row" style="margin-top:12px">
+        <span class="muted">Min chunk</span>
+        <input id="minChunk" type="number" min="150" max="1200" value="${state.prefs.minChunkSize}">
+        <span class="muted">Max chunk</span>
+        <input id="maxChunk" type="number" min="250" max="2500" value="${state.prefs.maxChunkSize}">
+        <button id="saveSettings">Save</button>
+      </div>
+
+      <div class="muted" style="margin-top:10px">
+        Recommended starting point: <span class="kbd">Min 350</span> / <span class="kbd">Max 900</span>.
+        If your cards are too long, lower Max. If they’re too chopped up, raise Max.
+      </div>
+    </div>
+
+    <div class="card danger">
+      <div class="big">Rebuild cards (advanced)</div>
+      <div class="muted" style="margin-top:8px">
+        If you change chunk sizing <i>after</i> importing, your existing cards won't automatically re-chunk.
+        You can delete and re-import a doc in <b>Library</b>, or rebuild all cards below.
+      </div>
+      <div class="actions">
+        <button id="rebuildAll">Rebuild cards from stored docs</button>
+      </div>
+    </div>
+  `;
+
+  document.getElementById("saveSettings").onclick = () => {
+    const minV = parseInt(document.getElementById("minChunk").value, 10);
+    const maxV = parseInt(document.getElementById("maxChunk").value, 10);
+    if (!(minV >= 150 && maxV >= 250 && minV < maxV)) {
+      alert("Please use valid values (Min < Max).");
+      return;
+    }
+    state.prefs.minChunkSize = minV;
+    state.prefs.maxChunkSize = maxV;
+    saveState(state);
+    renderAll();
+  };
+
+  document.getElementById("rebuildAll").onclick = () => {
+    if (!state.docs.length) { alert("No docs stored yet."); return; }
+    // rebuild: clear cards; recreate from doc.text
+    const keepDocs = [...state.docs];
+    state.cards = [];
+    for (const d of keepDocs) {
+      const newCards = chunkTextToCards(d.id, d.text, state.prefs.minChunkSize, state.prefs.maxChunkSize);
+      state.cards.push(...newCards);
+    }
+    state.prefs.flip = false;
+    saveState(state);
+    renderAll();
+    alert("Rebuilt cards.");
+  };
+}
+
+function renderAll() {
+  updateCounts();
+  renderStudy();
+  renderQuiz();
+  renderLibrary();
+  renderStats();
+  renderSettings();
+}
+
+// Service worker registration (offline)
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", async () => {
+    try { await navigator.serviceWorker.register("./sw.js"); } catch {}
+  });
+}
+
+renderTabs();
+renderAll();
+</script>
+</body>
+</html>
